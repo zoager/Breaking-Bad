@@ -1,0 +1,21 @@
+{
+ "schema_version":1,
+ "units":{"amount":"mol","volume":"L","temperature":"C"},
+ "species":[
+  {"id":"hydrogen","name_uk":"Іон Гідрогену","atoms":{"H":1},"charge":1,"phase":"aq"},
+  {"id":"bicarbonate","name_uk":"Гідрогенкарбонат-іон","atoms":{"H":1,"C":1,"O":3},"charge":-1,"phase":"aq"},
+  {"id":"sodium","name_uk":"Іон Натрію","atoms":{"Na":1},"charge":1,"phase":"aq"},
+  {"id":"chloride","name_uk":"Хлорид-іон","atoms":{"Cl":1},"charge":-1,"phase":"aq"},
+  {"id":"carbon_dioxide","name_uk":"Вуглекислий газ","atoms":{"C":1,"O":2},"charge":0,"phase":"g"},
+  {"id":"water","name_uk":"Вода","atoms":{"H":2,"O":1},"charge":0,"phase":"l"}
+ ],
+ "reactions":[{
+  "id":"bicarbonate_acid",
+  "reactants":{"bicarbonate":1,"hydrogen":1},
+  "products":{"carbon_dioxide":1,"water":1},
+  "sources":["https://www.ulm.edu/chemistry/courses/manuals/chem1009/session_04.pdf","https://chem.washington.edu/lecture-demos/bicarbonate-fizz"],
+  "simplifications":["Навчальна стехіометрична модель: повне перетворення лімітуючого реагенту, без кінетики й рівноваги.","Температура 20 °C є підтримуваним станом демонстрації, а не фізичним порогом реакції.","Готові розчини 0,10 mol/L та порції є параметрами гри, не лабораторним протоколом із джерел.","Газ повністю виходить із відкритої посудини; розчинення газу й зміна об’єму через утворення води не моделюються."],
+  "conditions":{"temperature_c":[20,20],"min_concentration_mol_l":{}},
+  "visual_events":["gas_bubbles"]
+ }]
+}

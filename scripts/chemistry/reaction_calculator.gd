@@ -67,6 +67,9 @@ static func calculate(catalog: ReactionCatalog, reaction_id: String, mixture: Mi
 				return Result.new(&"numeric_error")
 			# Correct only a roundoff overshoot, never consume unavailable material.
 			amount = available
+		if ratios[id] == extent:
+			# Exhaust the actual minimum exactly; avoid a spurious repeat from roundoff.
+			amount = available
 		consumed[id] = amount
 		remaining[id] = available - amount
 	for id: String in definition.products:

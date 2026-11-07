@@ -1,6 +1,6 @@
 class_name MixtureState
 extends RefCounted
-## Homogeneous liquid only. No reactions, solids, gases or heat exchange.
+## Owns dissolved contents, retained solids and cumulative product ledgers.
 ## Underscored state is owned here; callers use copies and validated operations.
 
 var _volume_l: float = 0.0
@@ -8,6 +8,9 @@ var _capacity_l: float = 0.0
 var _temperature_c: float = 0.0
 var _moles: Dictionary[String, float] = {}
 var _revision: int = 0
+var _solids: Dictionary[String, float] = {}
+var _released: Dictionary[String, float] = {}
+var _formed_solvent: Dictionary[String, float] = {}
 
 static func create(capacity_l: float, volume_l: float, temperature_c: float,
 		components: Dictionary[String, float]) -> MixtureState:
@@ -92,4 +95,30 @@ func transfer_to(target: MixtureState, volume_l: float) -> StringName:
 	target._volume_l = new_target_volume
 	target._temperature_c = temperature
 	target._revision += 1
+	return &"ok"
+
+func get_solids() -> Dictionary[String, float]:
+	return _solids.duplicate()
+
+func get_released_products() -> Dictionary[String, float]:
+	return _released.duplicate()
+
+func get_formed_solvent() -> Dictionary[String, float]:
+	return _formed_solvent.duplicate()
+
+## Internal transaction boundary used by ReactionEngine; callers must not edit fields.
+func _commit_reaction(expected_revision: int, dissolved: Dictionary[String, float],
+		solids: Dictionary[String, float], released: Dictionary[String, float],
+		formed_solvent: Dictionary[String, float]) -> StringName:
+	if expected_revision != _revision:
+		return &"stale_state"
+	for amounts: Dictionary in [dissolved, solids, released, formed_solvent]:
+		for id: String in amounts:
+			if id.is_empty() or not is_finite(amounts[id]) or amounts[id] < 0.0:
+				return &"numeric_error"
+	_moles = dissolved.duplicate()
+	_solids = solids.duplicate()
+	_released = released.duplicate()
+	_formed_solvent = formed_solvent.duplicate()
+	_revision += 1
 	return &"ok"

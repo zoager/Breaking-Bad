@@ -1,33 +1,6 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3]
 
-[node name="Main" type="Control"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+[ext_resource type="Script" path="res://scripts/lab/laboratory.gd" id="1_lab"]
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Content" type="VBoxContainer" parent="CenterContainer"]
-layout_mode = 2
-theme_override_constants/separation = 24
-
-[node name="Title" type="Label" parent="CenterContainer/Content"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 36
-text = "Лабораторія хімічних дослідів"
-horizontal_alignment = 1
-
-[node name="Status" type="Label" parent="CenterContainer/Content"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-text = "Проєкт готовий до розробки"
-horizontal_alignment = 1
+[node name="Laboratory" type="Node2D"]
+script = ExtResource("1_lab")

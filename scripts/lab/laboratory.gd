@@ -1,0 +1,146 @@
+extends Node2D
+
+const Vessel = preload("res://scripts/lab/lab_vessel.gd")
+const Mixture = preload("res://scripts/domain/mixture_state.gd")
+const Catalog = preload("res://scripts/catalog/reaction_catalog.gd")
+const ChemistryEngine = preload("res://scripts/chemistry/reaction_engine.gd")
+const CATALOG_PATH: String = "res://data/demo_catalog.json"
+const REACTION_ID: String = "bicarbonate_acid"
+var _catalog := Catalog.new()
+var _engine := ChemistryEngine.new()
+var _vessels: Array[LabVessel] = []
+var _receiver: LabVessel
+var _zone: Area2D
+var _portion: SpinBox
+var _status: Label
+var _product_info: Label
+
+func _ready() -> void:
+	get_viewport().physics_object_picking = true
+	_build_interface()
+	var errors: PackedStringArray = _catalog.load_file(CATALOG_PATH)
+	if not errors.is_empty():
+		_status.text = "Не вдалося завантажити каталог. " + "; ".join(errors)
+		push_error(_status.text)
+		return
+	_engine.reaction_applied.connect(_on_reaction_applied)
+	_reset()
+
+func _build_interface() -> void:
+	_zone = Area2D.new()
+	_zone.position = Vector2(980, 395)
+	_zone.collision_layer = 2
+	_zone.collision_mask = 1
+	_zone.input_pickable = false
+	var zone_shape := RectangleShape2D.new()
+	zone_shape.size = Vector2(260, 200)
+	var collision := CollisionShape2D.new()
+	collision.shape = zone_shape
+	_zone.add_child(collision)
+	add_child(_zone)
+	var layer := CanvasLayer.new()
+	add_child(layer)
+	_label(layer, "ЛАБОРАТОРІЯ / ПЕРШИЙ ДОСЛІД", Vector2(40, 25), Vector2(1000, 45), 29)
+	_label(layer, "Перетягни розчин над приймальною склянкою та відпусти — переллється обрана порція.", Vector2(40, 85), Vector2(1200, 35), 20)
+	_label(layer, "Склянка має стояти в позначеній робочій зоні. Додай по 10 мл обох розчинів.", Vector2(40, 120), Vector2(1200, 35), 18)
+	_label(layer, "Порція, мл:", Vector2(40, 175), Vector2(150, 40), 20)
+	_portion = SpinBox.new()
+	_portion.position = Vector2(195, 170)
+	_portion.size = Vector2(130, 45)
+	_portion.min_value = 1
+	_portion.max_value = 50
+	_portion.step = 1
+	_portion.value = 10
+	layer.add_child(_portion)
+	var reset := Button.new()
+	reset.text = "Почати заново"
+	reset.position = Vector2(1010, 170)
+	reset.size = Vector2(220, 45)
+	reset.pressed.connect(_reset)
+	layer.add_child(reset)
+	_label(layer, "РОБОЧА ЗОНА", Vector2(855, 260), Vector2(260, 35), 18)
+	_product_info = _label(layer, "CO₂ вийшло: 0 ммоль", Vector2(820, 565), Vector2(410, 35), 20)
+	_status = _label(layer, "", Vector2(40, 610), Vector2(1200, 55), 18)
+	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_label(layer, "Навчальне спрощення: повна стехіометрична реакція при 20 °C; без кінетики та зміни об’єму. Відтінки — умовне маркування.", Vector2(40, 685), Vector2(1200, 25), 14)
+
+func _label(parent: Node, text: String, pos: Vector2, dimensions: Vector2, font_size: int) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.position = pos
+	label.size = dimensions
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_size_override("font_size", font_size)
+	parent.add_child(label)
+	return label
+
+func _reset() -> void:
+	if _catalog.get_reaction_ids().is_empty():
+		return
+	for vessel: LabVessel in _vessels:
+		vessel.queue_free()
+	_vessels.clear()
+	_spawn("NaHCO₃ · 0,10 моль/л", Vector2(250, 470), Color("e8be74"), Mixture.create(0.2, 0.1, 20.0, {"sodium": 0.01, "bicarbonate": 0.01}))
+	_spawn("HCl · 0,10 моль/л", Vector2(520, 470), Color("b39be8"), Mixture.create(0.2, 0.1, 20.0, {"hydrogen": 0.01, "chloride": 0.01}))
+	_receiver = _spawn("Приймальна склянка", Vector2(980, 470), Color("82d6b0"), Mixture.create(0.1, 0.0, 20.0, {}))
+	_status.text = "Почни з будь-якого розчину. Кожне відпускання над приймальною склянкою переливає одну порцію."
+	_product_info.text = "CO₂ вийшло: 0 ммоль"
+
+func _spawn(title: String, pos: Vector2, color: Color, mixture: MixtureState) -> LabVessel:
+	var vessel := Vessel.new()
+	vessel.title = title
+	vessel.position = pos
+	vessel.accent = color
+	vessel.mixture = mixture
+	vessel.dropped.connect(_on_drop)
+	_vessels.append(vessel)
+	add_child(vessel)
+	return vessel
+
+func _on_drop(vessel: LabVessel) -> void:
+	# Wait for Area2D overlap information to catch up with the dragged transform.
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	if not is_instance_valid(vessel) or not _vessels.has(vessel):
+		return
+	if vessel == _receiver:
+		_status.text = "Приймальна склянка встановлена." if _zone.overlaps_area(vessel) else "Поверни приймальну склянку в робочу зону."
+		return
+	if not _receiver.overlaps_area(vessel):
+		_status.text = "Посуд переміщено. Для переливання піднеси розчин над приймальною склянкою."
+		return
+	vessel.position = vessel.drag_origin
+	if not _zone.overlaps_area(_receiver):
+		_status.text = "Спочатку встанови приймальну склянку в робочу зону."
+		return
+	pour(vessel, _portion.value / 1000.0)
+
+## UI adapter: the domain, not the animation, owns transferred amounts.
+func pour(source: LabVessel, volume_l: float) -> StringName:
+	var status: StringName = source.mixture.transfer_to(_receiver.mixture, volume_l)
+	if status != &"ok":
+		_status.text = "Недостатньо розчину в джерелі." if status == &"insufficient_volume" else "Переливання відхилено: перевір об’єм і вільну місткість."
+		return status
+	_status.text = "Перелито %.0f мл. Додай другий компонент і спостерігай." % (volume_l * 1000.0)
+	var result: ReactionCalculation = _engine.apply(_catalog, REACTION_ID, _receiver.mixture, _receiver.mixture.get_revision())
+	if result.get_status() not in [&"ok", &"insufficient_reagents"]:
+		_status.text = "Переливання виконано; реакцію не застосовано: " + str(result.get_status())
+	for vessel: LabVessel in _vessels:
+		vessel.refresh()
+	return &"ok"
+
+func _on_reaction_applied(mixture: MixtureState, _result: ReactionCalculation) -> void:
+	if mixture != _receiver.mixture:
+		return
+	if "gas_bubbles" in _catalog.reaction_snapshot(REACTION_ID).visual_events:
+		_receiver.show_bubbles()
+	var released: Dictionary[String, float] = mixture.get_released_products()
+	_product_info.text = "CO₂ вийшло: %.3f ммоль" % (float(released.get("carbon_dioxide", 0.0)) * 1000.0)
+	_status.text = "Спостерігаємо виділення CO₂. Газ виходить із відкритої склянки."
+
+func _draw() -> void:
+	draw_rect(Rect2(0, 235, 1280, 365), Color("172d37"))
+	draw_rect(Rect2(35, 485, 1210, 12), Color("6d8991"))
+	draw_rect(Rect2(35, 497, 1210, 90), Color("293d49"))
+	draw_rect(Rect2(850, 295, 260, 190), Color(0.3, 0.8, 0.65, 0.08))
+	draw_rect(Rect2(850, 295, 260, 190), Color("82d6b0"), false, 2)
