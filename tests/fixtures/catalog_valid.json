@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "units": {"amount": "mol", "volume": "L", "temperature": "C"},
+  "species": [
+    {"id": "h_plus", "name_uk": "Тестовий H+", "atoms": {"H": 1}, "charge": 1, "phase": "aq"},
+    {"id": "oh_minus", "name_uk": "Тестовий OH-", "atoms": {"O": 1, "H": 1}, "charge": -1, "phase": "aq"},
+    {"id": "water", "name_uk": "Тестова вода", "atoms": {"H": 2, "O": 1}, "charge": 0, "phase": "l"}
+  ],
+  "reactions": [{
+    "id": "fixture_neutralization",
+    "reactants": {"h_plus": 1, "oh_minus": 1},
+    "products": {"water": 1},
+    "sources": ["TEST FIXTURE ONLY: not a verified gameplay catalog"],
+    "simplifications": ["Synthetic validation fixture; interval is not a scientific condition"],
+    "conditions": {"temperature_c": [10, 30], "min_concentration_mol_l": {"h_plus": 0.001}},
+    "visual_events": []
+  }]
+}
