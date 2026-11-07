@@ -56,3 +56,7 @@
 Після імпорту класів запустити Godot із `--headless --path . --script res://tests/run_catalog_tests.gd`. Перевірено 110 перевірок, 0 помилок. Попередження `Exponent too high` очікуване для навмисно некоректного тестового числа.
 
 Опис формату та обмежень: [CATALOG_SCHEMA.md](docs/CATALOG_SCHEMA.md). JSON у tests/fixtures — тестовий, не готовий каталог гри. Перевірка структури й балансу не замінює перевірку хімічних джерел.
+
+## Тести розрахунку реакцій
+
+Після імпорту класів: `--headless --path . --script res://tests/run_reaction_tests.gd`. Перевірено: `Reaction tests: 54 checks, 0 failures`. Контракт і межі: [REACTION_CALCULATION.md](docs/REACTION_CALCULATION.md). Розрахунок ще не застосовується до суміші й не підключений до UI.
