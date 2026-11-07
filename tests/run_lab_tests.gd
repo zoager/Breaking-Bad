@@ -11,7 +11,7 @@ func _run() -> void:
 	root.add_child(lab)
 	await physics_frame
 	await physics_frame
-	check(lab._vessels.size() == 3, "three vessels ready")
+	check(lab._vessels.size() == 4, "four vessels ready")
 	check(lab._zone.overlaps_area(lab._receiver), "receiver in actual Area2D zone")
 	var first: LabVessel = lab._vessels[0]
 	var second: LabVessel = lab._vessels[1]
@@ -26,6 +26,33 @@ func _run() -> void:
 	# Direct adapter call isolates capacity rejection from pointer mechanics.
 	check(lab.pour(first, 0.09) == &"capacity_exceeded", "capacity feedback")
 	near(lab._receiver.mixture.get_volume_l(), 0.02, "rejected UI action atomic")
+	# Deterministic thermal checks: stop the automatic loop, retain physics overlaps.
+	lab.set_physics_process(false)
+	check(not lab._heater_switch.button_pressed, "heater starts off")
+	check(lab._heater_zone.overlaps_area(lab._water), "water on heater")
+	lab._heater_switch.button_pressed = true
+	lab._power.value = 50
+	lab.advance_heating(5.0)
+	near(lab._water.mixture.get_temperature_c(), 30.0, "UI power heats water")
+	near(lab._receiver.mixture.get_temperature_c(), 20.0, "reaction vessel unaffected")
+	check(not lab._water._info.text.contains("°C"), "water temperature requires probe")
+	check(not lab._water.contains_liquid_point(lab._water.position + Vector2(0, -100)), "probe above liquid cannot measure")
+	check(lab._water.contains_liquid_point(lab._water.position + Vector2(0, -30)), "probe inside liquid can measure")
+	await drag(lab._probe.position + Vector2(0, -35), lab._water.position + Vector2(0, -65))
+	lab.advance_heating(0.5)
+	check(lab._probe._reading.text.contains("31.0"), "dragged thermometer reads actual temperature")
+	await drag(lab._probe.position + Vector2(0, -35), Vector2(790, 285))
+	lab.advance_heating(0.5)
+	check(lab._probe._reading.text.contains("—"), "removed thermometer clears stale reading")
+	await drag(lab._water.position + Vector2(0, -60), Vector2(680, 245))
+	lab.advance_heating(1.0)
+	near(lab._water.mixture.get_temperature_c(), 31.0, "water removed from platform cools")
+	lab._water.position = Vector2(680, 470)
+	await physics_frame
+	await physics_frame
+	lab._heater_switch.button_pressed = false
+	lab.advance_heating(1.0)
+	near(lab._water.mixture.get_temperature_c(), 30.0, "off switch stops heating")
 	# Capture real render only in graphical test mode; headless has no framebuffer.
 	if DisplayServer.get_name() != "headless":
 		await process_frame
@@ -36,6 +63,8 @@ func _run() -> void:
 	await process_frame
 	near(lab._receiver.mixture.get_volume_l(), 0, "reset clears state")
 	check(lab._receiver.mixture.get_released_products().is_empty(), "reset clears gas ledger")
+	near(lab._water.mixture.get_temperature_c(), 20, "reset clears thermal state")
+	check(not lab._heater_switch.button_pressed, "reset switches heater off")
 	lab.queue_free()
 	await process_frame
 	print("Lab tests: %d checks, %d failures" % [checks, failures])

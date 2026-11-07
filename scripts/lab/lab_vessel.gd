@@ -6,6 +6,7 @@ var mixture: MixtureState
 var title: String = ""
 var accent: Color = Color.WHITE
 var dragging: bool = false
+var show_temperature: bool = true
 var drag_origin: Vector2
 var _offset: Vector2
 var _bubble_time: float = 0.0
@@ -34,7 +35,9 @@ func _ready() -> void:
 func refresh() -> void:
 	if _info == null or mixture == null:
 		return
-	_info.text = "%s\n%.0f / %.0f мл · %.0f °C" % [title, mixture.get_volume_l() * 1000.0, mixture.get_capacity_l() * 1000.0, mixture.get_temperature_c()]
+	_info.text = "%s\n%.0f / %.0f мл" % [title, mixture.get_volume_l() * 1000.0, mixture.get_capacity_l() * 1000.0]
+	if show_temperature:
+		_info.text += " · %.0f °C" % mixture.get_temperature_c()
 	queue_redraw()
 
 func show_bubbles() -> void:
@@ -80,3 +83,11 @@ func _draw() -> void:
 		for index: int in range(8):
 			var rise: float = fmod(_elapsed * 45.0 + index * 16.0, 120.0)
 			draw_circle(Vector2(-35 + index * 10, -10.0 - rise), 3.0 + index % 3, Color("edfaff"), false, 2.0, true)
+
+## Thermometer bulb must be inside the displayed liquid, not merely near the vessel.
+func contains_liquid_point(global_point: Vector2) -> bool:
+	if mixture == null or mixture.get_volume_l() <= 0.0:
+		return false
+	var local_point: Vector2 = to_local(global_point)
+	var height: float = 125.0 * mixture.get_volume_l() / mixture.get_capacity_l()
+	return absf(local_point.x) < 50.0 and local_point.y <= 0.0 and local_point.y >= -height

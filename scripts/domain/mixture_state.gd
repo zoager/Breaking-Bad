@@ -122,3 +122,14 @@ func _commit_reaction(expected_revision: int, dissolved: Dictionary[String, floa
 	_formed_solvent = formed_solvent.duplicate()
 	_revision += 1
 	return &"ok"
+
+## Temperature operations also invalidate pending reaction commands.
+func set_temperature_c(temperature_c: float, expected_revision: int) -> StringName:
+	if expected_revision != _revision:
+		return &"stale_state"
+	if not is_finite(temperature_c):
+		return &"invalid_temperature"
+	if temperature_c != _temperature_c:
+		_temperature_c = temperature_c
+		_revision += 1
+	return &"ok"
