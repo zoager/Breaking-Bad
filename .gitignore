@@ -1,0 +1,6 @@
+# Godot generated import cache and editor state
+.godot/
+# Local builds and temporary files
+builds/
+export_credentials.cfg
+*.tmp
